@@ -10,13 +10,13 @@ Need to scale the data
 """
 
 import numpy as np
-
+from sklearn.model_selection import train_test_split
 
 
 # Make data, n meshpoints.
-n = 20
-x = np.arange(0, 1, 1/n)
-y = np.arange(0, 1, 1/n)
+N = 20
+x = np.arange(0, 1, 1/N)
+y = np.arange(0, 1, 1/N)
 x, y = np.meshgrid(x,y)
 
 def FrankeFunction(x,y):
@@ -29,58 +29,89 @@ z = FrankeFunction(x, y)
 
 # The design matrix is an n^2 by m matrix, where m is the number of parameters, = (p+1)*(p+2)/2
 # for polynomials of degree p, with two variables.
-p = 9
-m = int((p+1) * (p+2) / 2)
+def FrankeLinReg(p):
 
-# First making a 3-dimensional design matrix utilizing the meshgrid. Coordinates are [y,x,degree].
+    x_train, x_test, y_train, y_test, z_train, z_test = train_test_split(x, y, z, test_size=0.2)
 
-Y = np.zeros((n,n,m))
-k = 0
+    X, Z = Mesh2Matr(x_train,y_train,z_train,p)
 
-for i in range(p+1):
-    for j in range(p+1-i):
-        Y[:,:,k] = (y**i)*(x**j)
-        k += 1
+    print(X.shape)
 
-#print(Y[10,10,:])
+    beta = np.linalg.inv(X.T @ X) @ (X.T) @ Z
 
-# Converting the 3-dimensional matrix to a 2-dimensional one, starting with y_0 for the first 20 rows spanning
-# x_0-x_19, then y_1 for another 20 rows, etc.
+    Ztilde = X @ beta
 
-# Design Matrix
-X = np.zeros((n*n,m))
-# Converting the function values to a vector
-Z = np.zeros(n*n)
+    print(beta)
+    print(Ztilde.shape)
 
-for i in range(20):
-    for j in range(20):
-        X[20*i+j,:] = Y[i,j,:]
-        Z[20*i+j] = z[i,j]
+    # Converting the prediction ztilde back to a meshgrid
 
-#print(X)
-print(X.shape)
+    n_train, m_train = x_train.shape[0],x_train.shape[1]
 
-beta = np.linalg.inv(X.T @ X) @ (X.T) @ Z
+    ztilde = Vec2Mesh(Ztilde,n_train, m_train)
 
-Ztilde = X @ beta
+    #print(ztilde)
 
-print(beta)
-print(Ztilde.shape)
+    return ztilde
 
-# Converting the prediction ztilde back to a meshgrid
+def Vec2Mesh(Z, n, m):
+    """
+    Takes a vector Z and converts it into an nxm matrix, row by row.
+    """
+    z = np.zeros((n,m))
 
-ztilde = np.zeros((n,n))
+    for i in range(n):
+        z[i,:] = Z[m * i : m * i + m]
+    return z
 
-for i in range(20):
-    ztilde[i,:] = Ztilde[20*i:20*i+20]
+def Mesh2Matr(x,y,z,p):
+    """
+    Converts a meshgrid x, y, and a dataset z into a design matrix X
+    of polynomials in x, y up to degree p, and a vector Z with the
+    dataset z arranged row by row.
+    """
+    n, m = x.shape[0], x.shape[1]
 
-#print(ztilde)
+    # Number of predictors
+    l = int((p+1) * (p+2) / 2)
+
+    # First making a 3-dimensional design matrix utilizing the meshgrid. Coordinates are [y,x,degree].
+
+    Y = np.zeros((n,m,l))
+    k = 0
+
+    for i in range(p+1):
+        for j in range(p+1-i):
+            Y[:,:,k] = (y**i)*(x**j)
+            k += 1
+
+    # Converting the 3-dimensional matrix to a 2-dimensional one, starting with y_0 for the first 20 rows spanning
+    # x_0-x_19, then y_1 for another 20 rows, etc.
+
+    # Design Matrix
+    X = np.zeros((n * m, l))
+    # Converting the function values to a vector
+    Z = np.zeros(n * m)
+
+    for i in range(n):
+        for j in range(m):
+            X[n*i+j,:] = Y[i,j,:]
+            Z[n*i+j] = z[i,j]
+
+    return X, Z
 
 def MSE(y_data,y_model):
     n = np.size(y_model)
     return np.sum((y_data-y_model)**2)/n
 
-print(f"MSE = {MSE(z,ztilde)}")
+def R2(y_data, y_model):
+    n = np.size(y_model)
+    return 1 - np.sum((y_data-y_model)**2)/np.sum((y_data-np.sum(y_data/n))**2)
+
+ztilde = FrankeLinReg(5)
+
+#print(f"MSE = {MSE(z,ztilde)}")
+#print(f"R² = {R2(z,ztilde)}")
 
 print(z[0,0:5])
 print(ztilde[0,0:5])
