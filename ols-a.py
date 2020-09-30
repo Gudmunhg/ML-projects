@@ -27,48 +27,60 @@ def FrankeFunction(x,y):
     return term1 + term2 + term3 + term4
 z = FrankeFunction(x, y)
 
-# The design matrix is an n^2 by m matrix, where m is the number of parameters, = (p+1)*(p+2)/2
-# for polynomials of degree p, with two variables.
-def FrankeLinReg(p):
+def FrankeLinReg(x,y,z,p):
 
-    x_train, x_test, y_train, y_test, z_train, z_test = train_test_split(x, y, z, test_size=0.2)
+    X = Mesh2Des(x,y,p)
+    Z = Mesh2Vec(z)
 
-    X, Z = Mesh2Matr(x_train,y_train,z_train,p)
-
-    print(X.shape)
+    #print(X.shape)
 
     beta = np.linalg.inv(X.T @ X) @ (X.T) @ Z
 
-    Ztilde = X @ beta
+    #Ztilde = X @ beta
 
-    print(beta)
-    print(Ztilde.shape)
+    #print(beta)
+    #print(Ztilde.shape)
 
     # Converting the prediction ztilde back to a meshgrid
 
-    n_train, m_train = x_train.shape[0],x_train.shape[1]
+    #n, m = x.shape[0],x.shape[1]
 
-    ztilde = Vec2Mesh(Ztilde,n_train, m_train)
+    #ztilde = Vec2Mesh(Ztilde,n, m)
 
     #print(ztilde)
 
-    return ztilde
+    return beta
 
 def Vec2Mesh(Z, n, m):
     """
-    Takes a vector Z and converts it into an nxm matrix, row by row.
+    Takes a vector Z and converts it into an n x m matrix, row by row.
     """
     z = np.zeros((n,m))
+    if n*m != len(Z):
+        print("oh fuck")
 
     for i in range(n):
         z[i,:] = Z[m * i : m * i + m]
     return z
 
-def Mesh2Matr(x,y,z,p):
+def Mesh2Vec(z):
     """
-    Converts a meshgrid x, y, and a dataset z into a design matrix X
-    of polynomials in x, y up to degree p, and a vector Z with the
-    dataset z arranged row by row.
+    Converts a meshgrid into a vector.
+    """
+    n, m = z.shape[0], z.shape[1]
+    # Converting the function values to a vector
+    Z = np.zeros(n * m)
+
+    for i in range(n):
+        for j in range(m):
+            Z[m*i+j] = z[i,j]
+
+    return Z
+
+def Mesh2Des(x,y,p):
+    """
+    Converts a meshgrid x, y into a design matrix X of polynomials
+    in x, y up to degree p.
     """
     n, m = x.shape[0], x.shape[1]
 
@@ -76,6 +88,8 @@ def Mesh2Matr(x,y,z,p):
     l = int((p+1) * (p+2) / 2)
 
     # First making a 3-dimensional design matrix utilizing the meshgrid. Coordinates are [y,x,degree].
+    # The design matrix is an n x m x l matrix, where l is the number of predictors = (p+1)*(p+2)/2
+    # for polynomials of degree p, with two variables.
 
     Y = np.zeros((n,m,l))
     k = 0
@@ -85,20 +99,17 @@ def Mesh2Matr(x,y,z,p):
             Y[:,:,k] = (y**i)*(x**j)
             k += 1
 
-    # Converting the 3-dimensional matrix to a 2-dimensional one, starting with y_0 for the first 20 rows spanning
-    # x_0-x_19, then y_1 for another 20 rows, etc.
+    # Converting the 3-dimensional matrix to a 2-dimensional one, starting with y_0 for the first m rows spanning
+    # x_0-x_m-1, then y_1 for another m rows, etc.
 
     # Design Matrix
     X = np.zeros((n * m, l))
-    # Converting the function values to a vector
-    Z = np.zeros(n * m)
 
     for i in range(n):
         for j in range(m):
             X[n*i+j,:] = Y[i,j,:]
-            Z[n*i+j] = z[i,j]
 
-    return X, Z
+    return X
 
 def MSE(y_data,y_model):
     n = np.size(y_model)
@@ -108,10 +119,30 @@ def R2(y_data, y_model):
     n = np.size(y_model)
     return 1 - np.sum((y_data-y_model)**2)/np.sum((y_data-np.sum(y_data/n))**2)
 
-ztilde = FrankeLinReg(5)
+def makePred(x,y,p,beta):
+    """
+    Makes a prediction with a given predictor vector beta on the mesh
+    grid x, y.
+    """
+    (n, m) = x.shape
+    X = Mesh2Des(x,y,p)
+    #print(n)
+    #print(m)
+    Z_pred = X @ beta
+    z_pred = Vec2Mesh(Z_pred, n, m)
+    print(f"Predshape = {z_pred.shape}")
+    return z_pred
 
-#print(f"MSE = {MSE(z,ztilde)}")
-#print(f"R² = {R2(z,ztilde)}")
+x_train, x_test, y_train, y_test, z_train, z_test = train_test_split(x, y, z, test_size=0.01)
 
-print(z[0,0:5])
-print(ztilde[0,0:5])
+p = 5
+beta = FrankeLinReg(x_train, y_train, z_train, p)
+z_pred = makePred(x_test, y_test, p,beta)
+
+np.set_printoptions(precision=3, suppress = True)
+print(f"MSE = {MSE(z_test,z_pred):.3f}")
+print(f"R² = {R2(z_test,z_pred):.3f}")
+print(beta)
+print(z_test[0,:])
+print(z_pred[0,:])
+#print(Mesh2Des(x_train,y_train,p)[1])
