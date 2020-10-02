@@ -10,7 +10,7 @@ def FrankeFunction(x, y):
 
 
 
-n = 100
+n = 1000
 np.random.seed(1111)
 # noise uncertainty
 sigma = 0.1
@@ -25,11 +25,11 @@ p = 5
 
 
 #Create regression class
-#This class acts more like a container, at least for now
+#This class acts more like a container, at least for now,
 #so all methods return values, and the class object
-#does not remember any variables
+#does not remember many variables
 
-
+#Create main class object
 test = regression(x, y, data, noise, n)
 #Create feature matrix
 X = test.create_feature_matrix(p)
@@ -37,6 +37,7 @@ X = test.create_feature_matrix(p)
 X_train, X_test, y_train, y_test = test.split_data(X, data)
 #Scale data
 scaled_X_train, scaled_X_test = test.scale_data(X_train, X_test)
+
 
 ##OLS
 #Create beta
@@ -49,7 +50,7 @@ test.accuracy_printer(y_train, y_tilde, y_test, y_predict, "OLS scores:")
 
 ##RIDGE
 #Create ridge beta
-ridge_beta = test.ridge(scaled_X_train, y_train, lmb=1.9)
+ridge_beta = test.ridge_beta(scaled_X_train, y_train, lmb=1.9)
 #then train the data and get prediction
 y_tilde, y_predict = test.make_prediction(scaled_X_train, scaled_X_test, ridge_beta)
 #Write R2/errors out to console
@@ -60,3 +61,5 @@ m = 100
 lmb = np.logspace(-4, 0, m)
 lasso_beta, y_tilde, y_predict = test.lasso(scaled_X_train, scaled_X_test, y_train, lmb[67])
 test.accuracy_printer(y_train, y_tilde, y_test, y_predict, "Lasso scores:")
+
+test.make_MSE_plot(data, 10 + 1)
