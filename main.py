@@ -34,7 +34,7 @@ test = regression(x, y, data, noise, n)
 #Create feature matrix
 X = test.create_feature_matrix(p)
 #split data
-X_train, X_test, y_train, y_test = test.split_data(X, data)
+X_train, X_test, y_train, y_test = test.split_data(X)
 #Scale data
 scaled_X_train, scaled_X_test = test.scale_data(X_train, X_test)
 
@@ -59,7 +59,14 @@ test.accuracy_printer(y_train, y_tilde, y_test, y_predict, "Ridge scores:")
 ##LASSO
 m = 100
 lmb = np.logspace(-4, 0, m)
-lasso_beta, y_tilde, y_predict = test.lasso(scaled_X_train, scaled_X_test, y_train, lmb[67])
+lasso_beta, y_tilde, y_predict = test.lasso(scaled_X_train, scaled_X_test, y_train, lmb[45])
 test.accuracy_printer(y_train, y_tilde, y_test, y_predict, "Lasso scores:")
 
-test.make_MSE_plot(data, 10 + 1)
+test.make_MSE_plot(10 + 1)
+
+conf = test.confidence_interval(X, 10)
+print("     lower       mean        upper")
+print(conf)
+print("---------")
+
+t = test.bootstrap()
