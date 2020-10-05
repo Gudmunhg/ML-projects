@@ -88,18 +88,17 @@ class regression:
         print("MSE score training:   ", self.MSE(train, tilde))
         print("MSE score prediciton: ", self.MSE(test, predict), "\n")
 
-    def bootstrap(self):
-        #Credit Morten Hjort Jensen
-        N = self.n
+    def bootstrap(self, data):
+        N = len(data)
         t = np.zeros(N)
         t0 = time()
         for i in range(N):
-            t[i] = np.mean(self.data[randint(0, N - 1, N - 1)])
+            t[i] = np.mean(data[randint(0, N - 1, N - 1)])
 
         print("Runtime: %g sec" % (time() - t0))
         print("Bootstrap Statistics :")
         print("data mean   data std    bootstrap mean   bootstrap std")
-        print("%8g    %7g %14g  %15g" % (np.mean(self.data), np.std(self.data), np.mean(t), np.std(t)))
+        print("%8g    %7g %14g  %15g" % (np.mean(data), np.std(data), np.mean(t), np.std(t)))
         return t
 
     def ols_beta(self, X, y):

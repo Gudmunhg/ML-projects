@@ -62,11 +62,14 @@ lmb = np.logspace(-4, 0, m)
 lasso_beta, y_tilde, y_predict = test.lasso(scaled_X_train, scaled_X_test, y_train, lmb[45])
 test.accuracy_printer(y_train, y_tilde, y_test, y_predict, "Lasso scores:")
 
+#Create a plot if the mean squared error of polynomials up to p + 1
 test.make_MSE_plot(10 + 1)
 
+#Give an array of values for the confidence interval of each component in beta
 conf = test.confidence_interval(X, 10)
 print("     lower       mean        upper")
 print(conf)
 print("---------")
 
-t = test.bootstrap()
+#Run bootstrapping tests on some data.
+t = test.bootstrap(data)
