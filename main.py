@@ -64,9 +64,13 @@ test.accuracy_printer(y_train, y_tilde, y_test, y_predict, "Lasso scores:")
 
 test.make_MSE_plot(10 + 1)
 
-conf = test.confidence_interval(X, 10)
+conf = test.confidence_interval(X, 20)
 print("     lower       mean        upper")
 print(conf)
 print("---------")
 
 t = test.bootstrap()
+
+test.bootstrapBiasVariance(scaled_X_train, y_train, scaled_X_test, y_test, 10)
+
+test.ridge_cross_validation(X, data, 5)

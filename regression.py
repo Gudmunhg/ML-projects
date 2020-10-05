@@ -17,6 +17,7 @@ plt.rcParams.update(newparams)
 
 mpl.style.use('fivethirtyeight')
 
+np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
 class regression:
     def __init__(self, x, y, data, noise, n):
@@ -149,13 +150,13 @@ class regression:
         # s = std of sample data
         # n = sample size
         beta = self.run_several(X, it)
-        confidence_interval = np.zeros((len(beta), 3))
+        confidence_interval = np.zeros((beta.shape[1], 3))
 
         #beta is sample
-        for i in range(len(beta)):
+        for i in range(beta.shape[1]):
             mean = np.mean(beta[:, i])
             std = np.std(beta[:, i])
-            sigma = std / np.sqrt(len(beta[0]))
+            sigma = std / np.sqrt(beta.shape[0])
             lower_bound = mean - sigma * 1.96
             upper_bound = mean + sigma * 1.96
             confidence_interval[i, 0] = lower_bound
@@ -181,3 +182,73 @@ class regression:
     def MSE(self, data, model):
         n = np.size(model)
         return (1.0 / n * np.sum((data - model)**2))
+
+    def make_single_prediction(self, X, beta):
+        return (X @ beta)
+
+    def bootstrapResample(self, x, y):
+        inds = np.random.randint(0, x.shape[0], size = x.shape[0])
+        x_boot = x[inds]
+        y_boot = y[inds]
+        return x_boot, y_boot
+
+    def bootstrapBiasVariance(self, X_train, y_train, X_test, y_test, n_boot):
+        y_pred = np.zeros((y_test.shape[0], n_boot))
+
+        for i in range(n_boot):
+            # Resample the data n_boot times, making a new prediction for each resampling.
+            X_resampled, y_resampled = self.bootstrapResample(X_train, y_train)
+            beta_resampled = self.ols_beta(X_resampled, y_resampled)
+            y_pred[:,i] = self.make_single_prediction(X_test, beta_resampled).ravel()
+
+        #y_test_ = np.zeros(y_pred.shape)
+        #for i in range(n_boot):
+        #    y_test_[:,i] = y_test
+        error = np.mean( np.mean((y_test[:,np.newaxis] - y_pred)**2, axis=1, keepdims=True) )
+        bias = np.mean( (y_test - np.mean(y_pred, axis=1, keepdims=True))**2)
+        variance = np.mean( np.var(y_pred, axis=1, keepdims=True))
+
+        print("Error: ", error)
+        print("Bias: ", bias)
+        print("Variance: ", variance)
+        return
+
+    def k_fold(self, x, splits = 5, shuffle = False):
+
+        indices = np.arange(x.shape[0])
+        if shuffle == True:
+            rng = np.random.default_rng()
+            rng.shuffle(indices)
+
+        test_inds = np.array_split(indices, splits)
+        train_inds = np.array_split(indices, splits)
+        for i in range(splits):
+            train_inds[i] = np.concatenate(np.delete(test_inds, i, 0))
+
+        return test_inds, train_inds
+
+    def ridge_cross_validation(self, X, y, splits):
+
+        test_inds, train_inds = self.k_fold(X, splits)
+        lmb_count = 500
+        lmb = np.logspace(-3, 3, lmb_count)
+        MSE_kfold = np.zeros((lmb_count,splits))
+
+        for i in range(lmb_count):
+            for j in range(splits):
+                X_train_kfold = X[train_inds[j]]
+                y_train_kfold = y[train_inds[j]]
+
+                X_test_kfold = X[test_inds[j]]
+                y_test_kfold = y[test_inds[j]]
+
+                beta_kfold = self.ridge_beta(X_train_kfold, y_train_kfold, lmb[i])
+                y_pred_kfold = self.make_single_prediction(X_test_kfold, beta_kfold)
+
+                MSE_kfold[i,j] = self.MSE(y_test, y_pred)
+
+        MSE_kfold = np.mean(MSE_kfold, axis=1)
+
+        #plt.figure()
+
+        return
