@@ -1,6 +1,7 @@
 import numpy as np
 
-np.random.seed(2020)
+seed = 2020
+np.random.seed(seed)
 
 n = 6
 sigma = 0.2

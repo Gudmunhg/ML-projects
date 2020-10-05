@@ -11,12 +11,18 @@ Need to scale the data
 
 import numpy as np
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 
 
+np.random.seed(1111)
 # Make data, n meshpoints.
-N = 20
-x = np.arange(0, 1, 1/N)
-y = np.arange(0, 1, 1/N)
+N = 100
+#x = np.arange(0, 1, 1/N)
+#y = np.arange(0, 1, 1/N)
+
+x = np.random.rand(N)
+y = np.random.rand(N)
+
 x, y = np.meshgrid(x,y)
 
 def FrankeFunction(x,y):
@@ -25,12 +31,11 @@ def FrankeFunction(x,y):
     term3 = 0.5*np.exp(-(9*x-7)**2/4.0 - 0.25*((9*y-3)**2))
     term4 = -0.2*np.exp(-(9*x-4)**2 - (9*y-7)**2)
     return term1 + term2 + term3 + term4
-z = FrankeFunction(x, y)
 
-def FrankeLinReg(x,y,z,p):
+def LinReg(X,Z):
 
-    X = Mesh2Des(x,y,p)
-    Z = Mesh2Vec(z)
+    #X = Mesh2Des(x,y,p)
+    #Z = Mesh2Vec(z)
 
     #print(X.shape)
 
@@ -119,30 +124,55 @@ def R2(y_data, y_model):
     n = np.size(y_model)
     return 1 - np.sum((y_data-y_model)**2)/np.sum((y_data-np.sum(y_data/n))**2)
 
-def makePred(x,y,p,beta):
+def makePred(X, p,beta):
     """
     Makes a prediction with a given predictor vector beta on the mesh
     grid x, y.
     """
-    (n, m) = x.shape
-    X = Mesh2Des(x,y,p)
+    #(n, m) = x.shape
+    #X = Mesh2Des(x,y,p)
     #print(n)
     #print(m)
     Z_pred = X @ beta
-    z_pred = Vec2Mesh(Z_pred, n, m)
-    print(f"Predshape = {z_pred.shape}")
-    return z_pred
-
-x_train, x_test, y_train, y_test, z_train, z_test = train_test_split(x, y, z, test_size=0.01)
+    #z_pred = Vec2Mesh(Z_pred, n, m)
+    #print(f"Predshape = {z_pred.shape}")
+    return Z_pred
 
 p = 5
-beta = FrankeLinReg(x_train, y_train, z_train, p)
-z_pred = makePred(x_test, y_test, p,beta)
+sigma = 0.1
+noise = np.random.normal(0, sigma, (N,N))
+z = FrankeFunction(x, y) + noise
+#print(noise)
+
+
+X = Mesh2Des(x,y,p)
+Z = Mesh2Vec(z)
+X_train, X_test, Z_train, Z_test = train_test_split(X, Z, test_size=0.2)
+#x_train, x_test, y_train, y_test, z_train, z_test = train_test_split(x, y, z, test_size=0.01)
+
+scaler = StandardScaler()
+scaler.fit(X_train[:,1:])
+X_train_scaled = np.ones(X_train.shape)
+X_test_scaled = np.ones(X_test.shape)
+X_train_scaled[:,1:] = scaler.transform(X_train[:,1:])
+X_test_scaled[:,1:] = scaler.transform(X_test[:,1:])
+#print(X_test_scaled)
+"""
+x_test = x
+x_train = x
+y_test = y
+y_train = y
+z_test = z
+z_train = z
+"""
+
+beta = LinReg(X_train_scaled, Z_train)
+Z_pred = makePred(X_test_scaled, p, beta)
 
 np.set_printoptions(precision=3, suppress = True)
-print(f"MSE = {MSE(z_test,z_pred):.3f}")
-print(f"R² = {R2(z_test,z_pred):.3f}")
+print(f"MSE = {MSE(Z_test,Z_pred):.3f}")
+print(f"R² = {R2(Z_test,Z_pred):.3f}")
 print(beta)
-print(z_test[0,:])
-print(z_pred[0,:])
+print(Z_test)
+print(Z_pred)
 #print(Mesh2Des(x_train,y_train,p)[1])
