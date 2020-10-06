@@ -71,6 +71,6 @@ print("---------")
 
 t = test.bootstrap()
 
-test.bootstrapBiasVariance(scaled_X_train, y_train, scaled_X_test, y_test, 10)
+test.bootstrapBiasVariance(scaled_X_train, y_train, scaled_X_test, y_test, 100)
 
-test.ridge_cross_validation(X, data, 5)
+test.ridge_cross_validation(X, data, splits = 5)

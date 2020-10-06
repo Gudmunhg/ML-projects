@@ -8,14 +8,13 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 from time import time
 
-fontsize = 18
-newparams = {'axes.titlesize': fontsize, 'axes.labelsize': fontsize,
-             'lines.linewidth': 2, 'lines.markersize': 7,
-             'ytick.labelsize': fontsize,
+mpl.style.use('fivethirtyeight')
+fontsize = 20
+newparams = {'axes.titlesize': fontsize + 5, 'axes.labelsize': fontsize + 2,
+             'lines.markersize': 7, 'figure.figsize': [15,10],
+             'ytick.labelsize': fontsize, 'figure.autolayout': True,
              'xtick.labelsize': fontsize, 'legend.loc': 'best', 'legend.fontsize': fontsize + 2}
 plt.rcParams.update(newparams)
-
-mpl.style.use('fivethirtyeight')
 
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
@@ -116,7 +115,7 @@ class regression:
 
     def lasso(self, X1, X2, y, lmb):
         #X1 - train, X2 - test, y - train
-        beta = skl.Lasso(alpha=lmb).fit(X1, y)
+        beta = skl.Lasso(alpha=lmb, max_iter=100000).fit(X1, y)
         y_fit = beta.predict(X1)
         y_pred = beta.predict(X2)
         return beta, y_fit, y_pred
@@ -177,7 +176,7 @@ class regression:
         return beta_aggregate
 
     def R2(self, data, model):
-        return (1.0 - np.sum((data - model))**2 / np.sum((data - np.mean(data))**2))
+        return (1.0 - np.sum((data - model)**2) / np.sum((data - np.mean(data))**2))
 
     def MSE(self, data, model):
         n = np.size(model)
@@ -232,7 +231,9 @@ class regression:
         test_inds, train_inds = self.k_fold(X, splits)
         lmb_count = 500
         lmb = np.logspace(-3, 3, lmb_count)
-        MSE_kfold = np.zeros((lmb_count,splits))
+        MSE_kfold_ridge = np.zeros((lmb_count,splits))
+        MSE_kfold_lasso = np.zeros((lmb_count,splits))
+        MSE_kfold_ols = np.zeros((lmb_count,splits))
 
         for i in range(lmb_count):
             for j in range(splits):
@@ -242,13 +243,40 @@ class regression:
                 X_test_kfold = X[test_inds[j]]
                 y_test_kfold = y[test_inds[j]]
 
-                beta_kfold = self.ridge_beta(X_train_kfold, y_train_kfold, lmb[i])
-                y_pred_kfold = self.make_single_prediction(X_test_kfold, beta_kfold)
+                if i == 0:
+                    beta_kfold_ols = self.ols_beta(X_train_kfold, y_train_kfold)
+                    y_pred_kfold_ols = self.make_single_prediction(X_test_kfold, beta_kfold_ols)
+                    MSE_kfold_ols[i,j] = self.MSE(y_test_kfold, y_pred_kfold_ols)
 
-                MSE_kfold[i,j] = self.MSE(y_test, y_pred)
+                beta_kfold_ridge = self.ridge_beta(X_train_kfold, y_train_kfold, lmb[i])
+                y_pred_kfold_ridge = self.make_single_prediction(X_test_kfold, beta_kfold_ridge)
+                MSE_kfold_ridge[i,j] = self.MSE(y_test_kfold, y_pred_kfold_ridge)
 
-        MSE_kfold = np.mean(MSE_kfold, axis=1)
+                _, _, y_pred_kfold_lasso = self.lasso(X_train_kfold, X_test_kfold, y_train_kfold, lmb[i])
+                """
+                beta_kfold_lasso = skl.Lasso(alpha=lmb[i]).fit(X_train_kfold, y_train_kfold)
+                y_pred_kfold_lasso = self.make_single_prediction(X_test_kfold, beta_kfold_lasso)
+                """
+                MSE_kfold_lasso[i,j] = self.MSE(y_test_kfold, y_pred_kfold_lasso)
 
-        #plt.figure()
+        MSE_kfold_ols = np.mean(MSE_kfold_ols, axis=1)
+        MSE_kfold_ols[:] = MSE_kfold_ols[0]
+        MSE_kfold_ridge = np.mean(MSE_kfold_ridge, axis=1)
+        MSE_kfold_lasso = np.mean(MSE_kfold_lasso, axis=1)
+
+        fig, ax = plt.subplots()
+        ax.plot(lmb, MSE_kfold_ols, label = "Ordinary Least Squares")
+        ax.plot(lmb, MSE_kfold_ridge, label = "Ridge Regression")
+        ax.plot(lmb, MSE_kfold_lasso, label = "Lasso Regression")
+
+        plt.legend()
+        #ax.set_yscale('log')
+        ax.set_xscale('log')
+        plt.xlabel("Hyperparameter $\lambda$")
+        plt.ylabel("Estimated MSE")
+        plt.title("MSE k-fold cross validation")
+        plt.xlim(lmb[0], lmb[-1]+1)
+        plt.show()
+        fig.savefig("K-fold-MSE")
 
         return
