@@ -8,14 +8,15 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 from time import time
 
-fontsize = 18
-newparams = {'axes.titlesize': fontsize, 'axes.labelsize': fontsize,
-             'lines.linewidth': 2, 'lines.markersize': 7,
-             'ytick.labelsize': fontsize,
+
+mpl.style.use('fivethirtyeight')
+fontsize = 20
+newparams = {'axes.titlesize': fontsize + 5, 'axes.labelsize': fontsize + 2,
+             'lines.markersize': 7, 'figure.figsize': [15,10],
+             'ytick.labelsize': fontsize, 'figure.autolayout': True,
              'xtick.labelsize': fontsize, 'legend.loc': 'best', 'legend.fontsize': fontsize + 2}
 plt.rcParams.update(newparams)
 
-mpl.style.use('fivethirtyeight')
 
 
 class regression:
@@ -75,9 +76,9 @@ class regression:
         X_train, X_test, y_train, y_test = self.split_data(X, ratio)
         scaled_X_train, scaled_X_test = self.scale_data(X_train, X_test)
 
-        X_split = np.asarray((X_train, X_test))
-        y_split = np.asarray((y_train, y_test))
-        scaled_X_split = np.asarray((scaled_X_train, scaled_X_test))
+        #X_split = np.asarray((X_train, X_test))
+        #y_split = np.asarray((y_train, y_test))
+        #scaled_X_split = np.asarray((scaled_X_train, scaled_X_test))
         # return X_split, y_split, scaled_X_split
         return scaled_X_train, scaled_X_test, y_train, y_test
 
@@ -87,19 +88,6 @@ class regression:
         print("R2 score prediction:  ", self.R2(test, predict))
         print("MSE score training:   ", self.MSE(train, tilde))
         print("MSE score prediciton: ", self.MSE(test, predict), "\n")
-
-    def bootstrap(self, data):
-        N = len(data)
-        t = np.zeros(N)
-        t0 = time()
-        for i in range(N):
-            t[i] = np.mean(data[randint(0, N - 1, N - 1)])
-
-        print("Runtime: %g sec" % (time() - t0))
-        print("Bootstrap Statistics :")
-        print("data mean   data std    bootstrap mean   bootstrap std")
-        print("%8g    %7g %14g  %15g" % (np.mean(data), np.std(data), np.mean(t), np.std(t)))
-        return t
 
     def ols_beta(self, X, y):
         return inv(X.T @ X) @ X.T @ y
@@ -114,13 +102,12 @@ class regression:
 
     def lasso(self, X1, X2, y, lmb):
         #X1 - train, X2 - test, y - train
-        beta = skl.Lasso(alpha=lmb).fit(X1, y)
+        beta = skl.Lasso(alpha=lmb, max_iter=10000 ).fit(X1, y)
         y_fit = beta.predict(X1)
         y_pred = beta.predict(X2)
         return beta, y_fit, y_pred
 
     def make_MSE_plot(self, max_degree):
-        # might make this in a plotter class instead
         test_error = np.zeros(max_degree)
         train_error = np.zeros(max_degree)
         poly_degree = np.arange(0, max_degree)
@@ -141,28 +128,6 @@ class regression:
         plt.title("Mean squared error of training vs testing data")
         plt.show()
 
-    def confidence_interval(self, X, it):
-        # mean +/- z*sigma, z = z-value aka 1.96 or 95%
-        # sigma = est. std of sample mean
-        #sigma = s /sqrt(n)
-        # s = std of sample data
-        # n = sample size
-        beta = self.run_several(X, it)
-        confidence_interval = np.zeros((len(beta), 3))
-
-        #beta is sample
-        for i in range(len(beta)):
-            mean = np.mean(beta[:, i])
-            std = np.std(beta[:, i])
-            sigma = std / np.sqrt(len(beta[0]))
-            lower_bound = mean - sigma * 1.96
-            upper_bound = mean + sigma * 1.96
-            confidence_interval[i, 0] = lower_bound
-            confidence_interval[i, 1] = mean
-            confidence_interval[i, 2] = upper_bound
-
-        return confidence_interval
-
     def run_several(self, X, iterations, method="OLS"):
         beta_aggregate = np.zeros((iterations, len(X[0])))
 
@@ -174,8 +139,18 @@ class regression:
 
         return beta_aggregate
 
+    def analytic_confindence_interval(self, X, beta):
+        var = np.diag(inv(X.T @ X)) * np.std(self.noise)
+
+        confidence_interval = np.zeros((len(var), 3))
+        confidence_interval[:, 0] = beta - np.sqrt(var) * 1.96 
+        confidence_interval[:, 1] = beta
+        confidence_interval[:, 2] = beta + np.sqrt(var) * 1.96 
+
+        return confidence_interval
+
     def R2(self, data, model):
-        return (1.0 - np.sum((data - model))**2 / np.sum((data - np.mean(data))**2))
+        return 1.0 - np.sum((data - model)**2) / np.sum((data - np.mean(data))**2)
 
     def MSE(self, data, model):
         n = np.size(model)

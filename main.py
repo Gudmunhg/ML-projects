@@ -1,4 +1,5 @@
 from regression import regression
+from plotter import error_plot
 import numpy as np
 
 def FrankeFunction(x, y):
@@ -10,7 +11,7 @@ def FrankeFunction(x, y):
 
 
 
-n = 1000
+n = 10000
 np.random.seed(1111)
 # noise uncertainty
 sigma = 0.1
@@ -21,8 +22,6 @@ y = np.random.uniform(0, 1, n)
 noise = np.random.normal(0, sigma, n)
 data = FrankeFunction(x, y) + noise
 p = 5
-
-
 
 #Create regression class
 #This class acts more like a container, at least for now,
@@ -59,17 +58,18 @@ test.accuracy_printer(y_train, y_tilde, y_test, y_predict, "Ridge scores:")
 ##LASSO
 m = 100
 lmb = np.logspace(-4, 0, m)
-lasso_beta, y_tilde, y_predict = test.lasso(scaled_X_train, scaled_X_test, y_train, lmb[45])
+lasso_beta, y_tilde, y_predict = test.lasso(scaled_X_train, scaled_X_test, y_train, lmb[67])
 test.accuracy_printer(y_train, y_tilde, y_test, y_predict, "Lasso scores:")
 
 #Create a plot if the mean squared error of polynomials up to p + 1
 test.make_MSE_plot(10 + 1)
 
-#Give an array of values for the confidence interval of each component in beta
-conf = test.confidence_interval(X, 10)
-print("     lower       mean        upper")
-print(conf)
-print("---------")
+print("-------------------")
 
-#Run bootstrapping tests on some data.
-t = test.bootstrap(data)
+conf_analytic = test.analytic_confindence_interval(scaled_X_train, beta)
+np.set_printoptions(precision=6, suppress=True)
+print("     lower       beta        upper")
+print(conf_analytic)
+
+#Plot beta with its respective upper and lower limits
+error_plot(beta, conf_analytic[:, 0], conf_analytic[:, 2])
