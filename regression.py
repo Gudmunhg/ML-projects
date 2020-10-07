@@ -1,12 +1,10 @@
 import numpy as np
 from numpy.linalg import inv
-from numpy.random import randint
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 import sklearn.linear_model as skl
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-from time import time
 
 
 mpl.style.use('fivethirtyeight')
@@ -14,7 +12,8 @@ fontsize = 20
 newparams = {'axes.titlesize': fontsize + 5, 'axes.labelsize': fontsize + 2,
              'lines.markersize': 7, 'figure.figsize': [15,10],
              'ytick.labelsize': fontsize, 'figure.autolayout': True,
-             'xtick.labelsize': fontsize, 'legend.loc': 'best', 'legend.fontsize': fontsize + 2}
+             'xtick.labelsize': fontsize, 'legend.loc': 'best', 
+             'legend.fontsize': fontsize + 2}
 plt.rcParams.update(newparams)
 
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
@@ -76,10 +75,6 @@ class regression:
         X_train, X_test, y_train, y_test = self.split_data(X, ratio)
         scaled_X_train, scaled_X_test = self.scale_data(X_train, X_test)
 
-        #X_split = np.asarray((X_train, X_test))
-        #y_split = np.asarray((y_train, y_test))
-        #scaled_X_split = np.asarray((scaled_X_train, scaled_X_test))
-        # return X_split, y_split, scaled_X_split
         return scaled_X_train, scaled_X_test, y_train, y_test
 
     def accuracy_printer(self, train, tilde, test, predict, txt):
@@ -107,7 +102,7 @@ class regression:
         y_pred = beta.predict(X2)
         return beta, y_fit, y_pred
 
-    def make_MSE_plot(self, max_degree):
+    def make_MSE_comparison(self, max_degree):
         test_error = np.zeros(max_degree)
         train_error = np.zeros(max_degree)
         poly_degree = np.arange(0, max_degree)
@@ -118,6 +113,8 @@ class regression:
             y_tilde, y_predict = self.make_prediction(scaled_X_train, scaled_X_test, beta)
             train_error[degree] = self.MSE(y_train, y_tilde)
             test_error[degree] = self.MSE(y_test, y_predict)
+
+        return poly_degree, train_error, test_error
 
         plt.plot(poly_degree, train_error, label="Train Error")
         plt.plot(poly_degree, test_error, label="Test Error")
@@ -200,7 +197,7 @@ class regression:
 
         return test_inds, train_inds
 
-    def ridge_cross_validation(self, X, y, splits):
+    def cross_validation(self, X, y, splits):
 
         test_inds, train_inds = self.k_fold(X, splits)
         lmb_count = 500
@@ -246,7 +243,7 @@ class regression:
         plt.legend()
         #ax.set_yscale('log')
         ax.set_xscale('log')
-        plt.xlabel("Hyperparameter $\lambda$")
+        plt.xlabel(r"Hyperparameter $\lambda$")
         plt.ylabel("Estimated MSE")
         plt.title("MSE k-fold cross validation")
         plt.xlim(lmb[0], lmb[-1]+1)
