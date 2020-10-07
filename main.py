@@ -73,3 +73,7 @@ print(conf_analytic)
 
 #Plot beta with its respective upper and lower limits
 error_plot(beta, conf_analytic[:, 0], conf_analytic[:, 2])
+
+test.bootstrapBiasVariance(scaled_X_train, y_train, scaled_X_test, y_test, 100)
+
+test.ridge_cross_validation(X, data, splits = 5)
