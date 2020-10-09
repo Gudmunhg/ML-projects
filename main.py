@@ -10,8 +10,8 @@ def FrankeFunction(x, y):
 
 
 
-n = 1000
-np.random.seed(1111)
+n = 4000
+#np.random.seed(1111)
 # noise uncertainty
 sigma = 0.1
 
@@ -34,11 +34,11 @@ test = regression(x, y, data, noise, n)
 #Create feature matrix
 X = test.create_feature_matrix(p)
 #split data
-X_train, X_test, y_train, y_test = test.split_data(X)
+#X_train, X_test, y_train, y_test = test.split_data(X)
 #Scale data
-scaled_X_train, scaled_X_test = test.scale_data(X_train, X_test)
+scaled_X_train, scaled_X_test = test.scale_data(X, X)
 
-
+"""
 ##OLS
 #Create beta
 beta = test.ols_beta(scaled_X_train, y_train)
@@ -71,6 +71,6 @@ print("---------")
 
 t = test.bootstrap()
 
-test.bootstrapBiasVariance(scaled_X_train, y_train, scaled_X_test, y_test, 100)
-
-test.ridge_cross_validation(X, data, splits = 5)
+test.bootstrapBiasVariance(scaled_X_train, y_train, scaled_X_test, y_test, 1000)
+"""
+test.ridge_cross_validation(scaled_X_train, data, splits = 2)
