@@ -3,65 +3,66 @@ from numpy.linalg import inv
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 import sklearn.linear_model as skl
-import matplotlib.pyplot as plt
-import matplotlib as mpl
-
-
-mpl.style.use('fivethirtyeight')
-fontsize = 20
-newparams = {'axes.titlesize': fontsize + 5, 'axes.labelsize': fontsize + 2,
-             'lines.markersize': 7, 'figure.figsize': [15,10],
-             'ytick.labelsize': fontsize, 'figure.autolayout': True,
-             'xtick.labelsize': fontsize, 'legend.loc': 'best', 
-             'legend.fontsize': fontsize + 2}
-plt.rcParams.update(newparams)
+from numba import jit
 
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
+
 class regression:
-    def __init__(self, x, y, data, noise, n):
+    def __init__(self, x, y, data):
         self.x = x
         self.y = y
-        self.data = data + noise
-        self.noise = noise
-        self.n = n
+        if len(data.shape) > 1:
+            self.data = np.ravel(data)
+        else:
+            self.data = data
 
-    # Functions helpful for regression
-    def create_feature_matrix(self, degree):
-        # maybe add jit?
-        points = int(degree * (degree + 3) / 2) + 1
-        X = np.zeros((self.n, points))
+    @staticmethod
+    def FrankeFunction(x, y):
+        term1 = 0.75 * np.exp(-(0.25 * (9 * x - 2)**2) - 0.25 * ((9 * y - 2)**2))
+        term2 = 0.75 * np.exp(-((9 * x + 1)**2) / 49.0 - 0.1 * (9 * y + 1))
+        term3 = 0.5 * np.exp(-(9 * x - 7)**2 / 4.0 - 0.25 * ((9 * y - 3)**2))
+        term4 = -0.2 * np.exp(-(9 * x - 4)**2 - (9 * y - 7)**2)
+        return term1 + term2 + term3 + term4
 
-        index = 0
-        for i in range(0, degree + 1):
-            for j in range(i, degree + 1):
-                if (i + j <= degree and index < points):
-                    if (i == j):
-                        X[:, index] = self.x**(j) * self.y**(i)
-                        index += 1
-                    else:
-                        X[:, index] = self.x**(j) * self.y**(i)
-                        index += 1
-                        X[:, index] = self.x**(i) * self.y**(j)
-                        index += 1
+    # Functions helpful for regression analysis
+    @jit
+    def create_feature_matrix(self, p):
+        if len(self.x.shape) > 1:
+            self.x = np.ravel(self.x)
+            self.y = np.ravel(self.y)
+
+        N = len(self.x)
+        l_ = int((p + 1) * (p + 2) / 2)      # Number of elements in beta
+        X = np.ones((N, l_))
+
+        for i in range(1, p + 1):
+            q = int((i) * (i + 1) / 2)
+            for k in range(i + 1):
+                X[:, q + k] = (self.x**(i - k)) * (self.y**k)
+
         return X
 
     def split_data(self, X, ratio=0.2):
         return train_test_split(
             X, self.data, test_size=ratio)
 
-    def scale_data(self, X1, X2):
+    def scale_data(self, X1, X2, dummy=True):
         # Scale two matricses whose first column both contain only ones
         # X1 is training data, X2 is testing data
         #np.newaxis = None
-
+        scaler = StandardScaler()
         if (len(X1[0]) == 1):
+            return X1, X2
+        elif (not dummy):
+            scaler.fit(X1)
+            X1 = scaler.transform(X1)
+            X2 = scaler.transform(X2)
             return X1, X2
         else:
             X1 = np.delete(X1, 0, axis=1)
             X2 = np.delete(X2, 0, axis=1)
 
-            scaler = StandardScaler()
             scaler.fit(X1)
             X1 = scaler.transform(X1)
             X2 = scaler.transform(X2)
@@ -102,47 +103,30 @@ class regression:
         y_pred = beta.predict(X2)
         return beta, y_fit, y_pred
 
+    @jit
     def make_MSE_comparison(self, max_degree):
         test_error = np.zeros(max_degree)
         train_error = np.zeros(max_degree)
         poly_degree = np.arange(0, max_degree)
 
         for degree in range(0, max_degree):
-            scaled_X_train, scaled_X_test, y_train, y_test = self.create_split_scale(degree)
+            scaled_X_train, scaled_X_test, y_train, y_test = self.create_split_scale(
+                degree)
             beta = self.ols_beta(scaled_X_train, y_train)
-            y_tilde, y_predict = self.make_prediction(scaled_X_train, scaled_X_test, beta)
+            y_tilde, y_predict = self.make_prediction(
+                scaled_X_train, scaled_X_test, beta)
             train_error[degree] = self.MSE(y_train, y_tilde)
             test_error[degree] = self.MSE(y_test, y_predict)
 
         return poly_degree, train_error, test_error
 
-        plt.plot(poly_degree, train_error, label="Train Error")
-        plt.plot(poly_degree, test_error, label="Test Error")
-        plt.legend()
-        plt.xlabel("Model complexity")
-        plt.ylabel("Prediction Error")
-        plt.xlim(0, max_degree - 1)
-        plt.title("Mean squared error of training vs testing data")
-        plt.show()
-
-    def run_several(self, X, iterations, method="OLS"):
-        beta_aggregate = np.zeros((iterations, len(X[0])))
-
-        for i in range(iterations):
-            X_train, X_test, y_train, y_test = self.split_data(X)
-            scaled_X_train, scaled_X_test = self.scale_data(X_train, X_test)
-            beta = self.ols_beta(scaled_X_train, y_train)
-            beta_aggregate[i] = beta
-
-        return beta_aggregate
-
-    def analytic_confindence_interval(self, X, beta):
-        var = np.diag(inv(X.T @ X)) * np.std(self.noise)
+    def analytic_confindence_interval(self, X, beta, noise):
+        var = np.diag(inv(X.T @ X)) * np.std(noise)
 
         confidence_interval = np.zeros((len(var), 3))
-        confidence_interval[:, 0] = beta - np.sqrt(var) * 1.96 
+        confidence_interval[:, 0] = beta - np.sqrt(var) * 1.96
         confidence_interval[:, 1] = beta
-        confidence_interval[:, 2] = beta + np.sqrt(var) * 1.96 
+        confidence_interval[:, 2] = beta + np.sqrt(var) * 1.96
 
         return confidence_interval
 
@@ -157,11 +141,12 @@ class regression:
         return (X @ beta)
 
     def bootstrapResample(self, x, y):
-        inds = np.random.randint(0, x.shape[0], size = x.shape[0])
+        inds = np.random.randint(0, x.shape[0], size=x.shape[0])
         x_boot = x[inds]
         y_boot = y[inds]
         return x_boot, y_boot
 
+    @jit
     def bootstrapBiasVariance(self, X_train, y_train, X_test, y_test, n_boot):
         y_pred = np.zeros((y_test.shape[0], n_boot))
 
@@ -169,24 +154,22 @@ class regression:
             # Resample the data n_boot times, making a new prediction for each resampling.
             X_resampled, y_resampled = self.bootstrapResample(X_train, y_train)
             beta_resampled = self.ols_beta(X_resampled, y_resampled)
-            y_pred[:,i] = self.make_single_prediction(X_test, beta_resampled).ravel()
+            y_pred[:, i] = self.make_single_prediction(
+                X_test, beta_resampled).ravel()
 
-        #y_test_ = np.zeros(y_pred.shape)
-        #for i in range(n_boot):
-        #    y_test_[:,i] = y_test
-        error = np.mean( np.mean((y_test[:,np.newaxis] - y_pred)**2, axis=1, keepdims=True) )
-        bias = np.mean( (y_test - np.mean(y_pred, axis=1, keepdims=True))**2)
-        variance = np.mean( np.var(y_pred, axis=1, keepdims=True))
+        error = np.mean(
+            np.mean((y_test[:, np.newaxis] - y_pred)**2, axis=1, keepdims=True))
+        bias = np.mean((y_test - np.mean(y_pred, axis=1, keepdims=True))**2)
+        variance = np.mean(np.var(y_pred, axis=1, keepdims=True))
 
         print("Error: ", error)
         print("Bias: ", bias)
         print("Variance: ", variance)
-        return
 
-    def k_fold(self, x, splits = 5, shuffle = False):
+    def k_fold(self, x, splits=5, shuffle=False):
 
         indices = np.arange(x.shape[0])
-        if shuffle == True:
+        if shuffle is True:
             rng = np.random.default_rng()
             rng.shuffle(indices)
 
@@ -197,14 +180,15 @@ class regression:
 
         return test_inds, train_inds
 
-    def cross_validation(self, X, y, splits):
-
+    @jit
+    def cross_validation(self, X, splits):
+        y = self.data
         test_inds, train_inds = self.k_fold(X, splits)
         lmb_count = 500
         lmb = np.logspace(-3, 3, lmb_count)
-        MSE_kfold_ridge = np.zeros((lmb_count,splits))
-        MSE_kfold_lasso = np.zeros((lmb_count,splits))
-        MSE_kfold_ols = np.zeros((lmb_count,splits))
+        MSE_kfold_ridge = np.zeros((lmb_count, splits))
+        MSE_kfold_lasso = np.zeros((lmb_count, splits))
+        MSE_kfold_ols = np.zeros((lmb_count, splits))
 
         for i in range(lmb_count):
             for j in range(splits):
@@ -215,39 +199,32 @@ class regression:
                 y_test_kfold = y[test_inds[j]]
 
                 if i == 0:
-                    beta_kfold_ols = self.ols_beta(X_train_kfold, y_train_kfold)
-                    y_pred_kfold_ols = self.make_single_prediction(X_test_kfold, beta_kfold_ols)
-                    MSE_kfold_ols[i,j] = self.MSE(y_test_kfold, y_pred_kfold_ols)
+                    beta_kfold_ols = self.ols_beta(
+                        X_train_kfold, y_train_kfold)
+                    y_pred_kfold_ols = self.make_single_prediction(
+                        X_test_kfold, beta_kfold_ols)
+                    MSE_kfold_ols[i, j] = self.MSE(
+                        y_test_kfold, y_pred_kfold_ols)
 
-                beta_kfold_ridge = self.ridge_beta(X_train_kfold, y_train_kfold, lmb[i])
-                y_pred_kfold_ridge = self.make_single_prediction(X_test_kfold, beta_kfold_ridge)
-                MSE_kfold_ridge[i,j] = self.MSE(y_test_kfold, y_pred_kfold_ridge)
+                beta_kfold_ridge = self.ridge_beta(
+                    X_train_kfold, y_train_kfold, lmb[i])
+                y_pred_kfold_ridge = self.make_single_prediction(
+                    X_test_kfold, beta_kfold_ridge)
+                MSE_kfold_ridge[i, j] = self.MSE(
+                    y_test_kfold, y_pred_kfold_ridge)
 
-                _, _, y_pred_kfold_lasso = self.lasso(X_train_kfold, X_test_kfold, y_train_kfold, lmb[i])
+                _, _, y_pred_kfold_lasso = self.lasso(
+                    X_train_kfold, X_test_kfold, y_train_kfold, lmb[i])
                 """
                 beta_kfold_lasso = skl.Lasso(alpha=lmb[i]).fit(X_train_kfold, y_train_kfold)
                 y_pred_kfold_lasso = self.make_single_prediction(X_test_kfold, beta_kfold_lasso)
                 """
-                MSE_kfold_lasso[i,j] = self.MSE(y_test_kfold, y_pred_kfold_lasso)
+                MSE_kfold_lasso[i, j] = self.MSE(
+                    y_test_kfold, y_pred_kfold_lasso)
 
         MSE_kfold_ols = np.mean(MSE_kfold_ols, axis=1)
         MSE_kfold_ols[:] = MSE_kfold_ols[0]
         MSE_kfold_ridge = np.mean(MSE_kfold_ridge, axis=1)
         MSE_kfold_lasso = np.mean(MSE_kfold_lasso, axis=1)
 
-        fig, ax = plt.subplots()
-        ax.plot(lmb, MSE_kfold_ols, label = "Ordinary Least Squares")
-        ax.plot(lmb, MSE_kfold_ridge, label = "Ridge Regression")
-        ax.plot(lmb, MSE_kfold_lasso, label = "Lasso Regression")
-
-        plt.legend()
-        #ax.set_yscale('log')
-        ax.set_xscale('log')
-        plt.xlabel(r"Hyperparameter $\lambda$")
-        plt.ylabel("Estimated MSE")
-        plt.title("MSE k-fold cross validation")
-        plt.xlim(lmb[0], lmb[-1]+1)
-        plt.show()
-        fig.savefig("K-fold-MSE")
-
-        return
+        return lmb, MSE_kfold_ols, MSE_kfold_ridge, MSE_kfold_lasso
