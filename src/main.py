@@ -210,5 +210,16 @@ def plot_cross_validation(terrain=False):
 
 #Plot the bias variance trade off
 #use lmb != 0 to use the ridge model
+n = 10000
+sigma = 0.1
+
+x = np.random.uniform(0, 1, n)
+y = np.random.uniform(0, 1, n)
+
+noise = np.random.normal(0, sigma, n)
+data = regression.FrankeFunction(x, y) + noise
+reg = regression(x, y, data)
+
+
 #reg.bias_variance_plot(0, 11, lmb = 0, n_boot=100)
-#reg.bias_variance_plot(0, 11, lmb = 1e-9, n_boot=100)
+#reg.bias_variance_plot(0, 25, lmb = 1e-9, n_boot=100)
