@@ -218,18 +218,7 @@ class regression:
         print("Variance: ", variance, "\n")
 
         return error, bias, variance
-    """
-    def bias_variance(self, y_pred, y_test):
-        y_test = y_test.reshape(-1,1)
-        error = np.mean( np.mean((y_test - y_pred)**2, axis=1, keepdims=True) )
-        bias = np.mean( (y_test - np.mean(y_pred, axis=1, keepdims=True))**2 )
-        variance = np.mean( np.var(y_pred, axis=1, keepdims=True))
 
-        print("Error: ", error)
-        print("Bias: ", bias)
-        print("Variance: ", variance, "\n")
-        return error, bias, variance
-    """
     def bias_variance_plot(self, p_start = 1, p_stop = 11, lmb = 0, n_boot = 100):
 
         p_range = np.arange(p_start,p_stop + 1)
@@ -270,8 +259,8 @@ class regression:
             plt.title("Bias-Variance Tradeoff OLS")
             fig.savefig("Bias-Variance Tradeoff OLS_n_" + str(self.n))
         else:
-            plt.title("Bias-Variance Tradeoff Ridge")
-            fig.savefig("Bias-Variance Tradeoff Ridge_n_" + str(self.n))
+            plt.title("Bias-Variance Tradeoff Ridge with $\lambda$ = " + str(lmb))
+            fig.savefig("Bias-Variance Tradeoff Ridge_n_" + str(self.n) + "_lmb_" + str(lmb))
         plt.show()
 
     def k_fold(self, x, splits = 5, shuffle = False):
@@ -291,7 +280,7 @@ class regression:
     def ridge_cross_validation(self, X, y, splits):
 
         test_inds, train_inds = self.k_fold(X, splits)
-        lmb_count = 500
+        lmb_count = 100
         lmb = np.logspace(-3, 5, lmb_count)
         MSE_kfold_ridge = np.zeros((lmb_count,splits))
         MSE_kfold_lasso = np.zeros((lmb_count,splits))
@@ -345,7 +334,7 @@ class regression:
         ax.plot(lmb, MSE_kfold_lasso, label = "Lasso Regression")
 
         plt.legend()
-        ax.set_yscale('log')
+        #ax.set_yscale('log')
         ax.set_xscale('log')
 
         plt.xlabel("Hyperparameter $\lambda$")
