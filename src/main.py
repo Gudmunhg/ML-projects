@@ -16,24 +16,6 @@ newparams = {'axes.titlesize': fontsize + 3, 'axes.labelsize': fontsize + 2,
              'legend.fontsize': fontsize + 2, 'figure.titlesize': fontsize + 5}
 plt.rcParams.update(newparams)
 
-
-def plot3D(row, col, data, title, subplot=False):
-    fig = plt.figure()
-    if (subplot):
-        ax = fig.subplots(1, len(data), 1, projection='3d')
-    else:
-        ax = fig.gca(projection='3d')
-
-    for i in range(len(data)):
-        surf = ax.plot_surface(col, row, data, cmap=cm.viridis, linewidth=0, antialiased=False)
-        fig.colorbar(surf, shrink=0.5, aspect=5)
-
-    plt.xlabel("x")
-    plt.ylabel("y")
-    plt.title(title)
-    plt.show()
-
-
 #File for producing results/figures
 #See example.py for examples of class method usage
 """
@@ -169,3 +151,9 @@ xlabel = "Model Complexity"
 ylabel = "Prediction Error"
 make_2plot(poly, train_error, test_error, poly_max,
            "Train Error", "Test Error", xlabel, ylabel, title)
+
+
+
+
+reg.ridge_cross_validation(scaled_X_train, data, splits = 5)
+reg.bias_variance_plot(0, 11, lmb = 0, n_boot=100)
