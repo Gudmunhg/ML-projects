@@ -18,10 +18,8 @@ plt.rcParams.update(newparams)
 
 #File for producing results/figures
 #See example.py for examples of class method usage
-"""
-What results/figures do we want?
-Hastie figure MSE
-"""
+#Uncomment the nececcery code to produce plot.
+
 def normalise(v):
     return (v - np.min(v))/(np.max(v) - np.min(v))
 
@@ -132,28 +130,58 @@ def plot_franke(row, col):
 
 np.random.seed(1111)
 n = 1000
-# noise uncertainty
 sigma = 0.1
 
 x = np.random.uniform(0, 1, n)
 y = np.random.uniform(0, 1, n)
-#x, y = np.meshgrid(x, y)
 
 noise = np.random.normal(0, sigma, n)
 data = regression.FrankeFunction(x, y) + noise
-
 reg = regression(x, y, data)
 
-poly_max = 12
-poly, train_error, test_error = reg.make_MSE_comparison(poly_max)
-title = "Mean squared error of training vs testing data"
-xlabel = "Model Complexity"
-ylabel = "Prediction Error"
-make_2plot(poly, train_error, test_error, poly_max,
-           "Train Error", "Test Error", xlabel, ylabel, title)
+def plot_MSE():
+    poly_max = 12
+    poly, train_error, test_error = reg.make_MSE_comparison(poly_max)
+    title = "Mean squared error of training vs testing data"
+    xlabel = "Model Complexity"
+    ylabel = "Prediction Error"
+    make_2plot(poly, train_error, test_error, poly_max,
+        "Train Error", "Test Error", xlabel, ylabel, title)
 
+#plot_MSE()
 
+def plot_confidence_interval():
+    n = 10000
+    sigma = 0.1
 
+    x = np.random.uniform(0, 1, n)
+    y = np.random.uniform(0, 1, n)
 
-reg.ridge_cross_validation(scaled_X_train, data, splits = 5)
-reg.bias_variance_plot(0, 11, lmb = 0, n_boot=100)
+    noise = np.random.normal(0, sigma, n)
+    data = regression.FrankeFunction(x, y) + noise
+    reg = regression(x, y, data)
+    X = reg.create_feature_matrix(5)
+    X_train, X_test, y_train, y_test = reg.split_data(X)
+    scaled_X_train, scaled_X_test = reg.scale_data(X_train, X_test)
+    beta = reg.ols_beta(scaled_X_train, y_train)
+    conf_analytic = reg.analytic_confindence_interval(scaled_X_train, beta, noise)
+    np.set_printoptions(precision=6, suppress=True)
+    print("     lower       beta        upper")
+    print(conf_analytic)
+
+    # Plot beta with its respective upper and lower limits
+    error_plot(beta, conf_analytic[:, 0], conf_analytic[:, 2])
+
+#plot_confidence_interval()
+
+def plot_cross_validation():
+    X = reg.create_feature_matrix(5)
+    X_train, X_test, y_train, y_test = reg.split_data(X)
+    scaled_X_train, scaled_X_test = reg.scale_data(X, X)
+
+    reg.cross_validation(scaled_X_train, data, splits = 5)
+
+#plot_cross_validation()
+
+#Plot the bias variance trade off
+#reg.bias_variance_plot(0, 11, lmb = 0, n_boot=100)

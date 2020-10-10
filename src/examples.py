@@ -68,18 +68,7 @@ lasso_beta, y_tilde, y_predict = test.lasso(
     scaled_X_train, scaled_X_test, y_train, lmb[67])
 test.accuracy_printer(y_train, y_tilde, y_test, y_predict, "Lasso scores:")
 
-# Create a plot of the mean squared error of polynomials up to p + 1
-poly_max = 12
-poly, train_error, test_error = test.make_MSE_comparison(poly_max)
-title = "Mean squared error of training vs testing data"
-xlabel = "Model Complexity"
-ylabel = "Prediction Error"
-make_2plot(poly, train_error, test_error, poly_max,
-           "Train Error", "Test Error", xlabel, ylabel, title)
 
-
-print("-------------------")
-"""
 conf_analytic = test.analytic_confindence_interval(scaled_X_train, beta, noise)
 np.set_printoptions(precision=6, suppress=True)
 print("     lower       beta        upper")
