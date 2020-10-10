@@ -174,14 +174,41 @@ def plot_confidence_interval():
 
 #plot_confidence_interval()
 
-def plot_cross_validation():
-    X = reg.create_feature_matrix(5)
-    X_train, X_test, y_train, y_test = reg.split_data(X)
-    scaled_X_train, scaled_X_test = reg.scale_data(X, X)
+def plot_cross_validation(terrain=False):
+    if (terrain):
+        N=100
+        terrain1 = imread('DataFiles/SRTM_data_Norway_1.tif')
+        terrain1 = terrain1[:N,:N]
+        row = terrain1.shape[0]
+        col = terrain1.shape[1]
+        rowmat, colmat = get_mesh(row, col)
 
-    reg.cross_validation(scaled_X_train, data, splits = 5)
+        data = terrain1
+        data = normalise(data)
 
+        row_arr = rowmat.ravel()
+        col_arr = colmat.ravel()
+        data_arr = data.ravel()
+
+        reg = regression(row_arr, col_arr, data_arr)
+
+        X = reg.create_feature_matrix(5)
+        X, Y = reg.scale_data(X, X)
+        print(X.shape)
+        print(data_arr.shape)
+        reg.cross_validation(X, data_arr, splits = 5)
+
+    else:
+        X = reg.create_feature_matrix(5)
+        scaled_X_train, scaled_X_test = reg.scale_data(X, X)
+
+        reg.cross_validation(scaled_X_train, data, splits = 5)
+
+#Set true to test with terrain data
+#plot_cross_validation(True)
 #plot_cross_validation()
 
 #Plot the bias variance trade off
+#use lmb != 0 to use the ridge model
 #reg.bias_variance_plot(0, 11, lmb = 0, n_boot=100)
+#reg.bias_variance_plot(0, 11, lmb = 1e-9, n_boot=100)
