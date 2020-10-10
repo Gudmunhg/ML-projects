@@ -268,10 +268,10 @@ class regression:
         plt.legend()
         if lmb == 0:
             plt.title("Bias-Variance Tradeoff OLS")
-            fig.savefig("Bias-Variance Tradeoff OLS")
+            fig.savefig("Bias-Variance Tradeoff OLS_n_" + str(self.n))
         else:
             plt.title("Bias-Variance Tradeoff Ridge")
-            fig.savefig("Bias-Variance Tradeoff Ridge")
+            fig.savefig("Bias-Variance Tradeoff Ridge_n_" + str(self.n))
         plt.show()
 
     def k_fold(self, x, splits = 5, shuffle = False):
@@ -354,7 +354,7 @@ class regression:
         plt.xlim(lmb[0], lmb[-1]+1)
         plt.ylim(0.8*np.min(np.array((np.min(MSE_kfold_ridge), np.min(MSE_kfold_ols), np.min(MSE_kfold_lasso)))), 1.2*np.max(np.array((np.max(MSE_kfold_ridge), np.max(MSE_kfold_ols), np.max(MSE_kfold_lasso)))))
         plt.show()
-        fig.savefig("K-fold-MSE")
+        fig.savefig("K-fold-MSE_n_" + str(self.n))
 
         fig2, ax2 = plt.subplots()
         ax2.plot(lmb, R2_kfold_ols, label = "Ordinary Least Squares")
@@ -370,6 +370,6 @@ class regression:
         plt.xlim(lmb[0], lmb[-1]+1)
         plt.ylim(-0.5, 1.1)
         plt.show()
-        fig2.savefig("K-fold-R2")
+        fig2.savefig("K-fold-R2_n_" + str(self.n))
 
         return
