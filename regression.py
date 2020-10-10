@@ -208,18 +208,71 @@ class regression:
                 beta_resampled = self.ridge_beta(X_resampled, y_resampled, lmb)
                 y_pred[:,i] = self.make_single_prediction(X_test, beta_resampled)
 
-        #y_test_ = np.zeros(y_pred.shape)
-        #for i in range(n_boot):
-        #    y_test_[:,i] = y_test
-        #print(y_test_)
-        error = np.mean( np.mean((y_test[:,np.newaxis] - y_pred)**2, axis=1, keepdims=True) )
-        bias = np.mean( (y_test - np.mean(y_pred, axis=1, keepdims=True))**2)
+        y_test = y_test.reshape(-1,1)
+        error = np.mean( np.mean((y_test - y_pred)**2, axis=1, keepdims=True) )
+        bias = np.mean( (y_test - np.mean(y_pred, axis=1, keepdims=True))**2 )
         variance = np.mean( np.var(y_pred, axis=1, keepdims=True))
 
         print("Error: ", error)
         print("Bias: ", bias)
-        print("Variance: ", variance)
+        print("Variance: ", variance, "\n")
+
         return error, bias, variance
+    """
+    def bias_variance(self, y_pred, y_test):
+        y_test = y_test.reshape(-1,1)
+        error = np.mean( np.mean((y_test - y_pred)**2, axis=1, keepdims=True) )
+        bias = np.mean( (y_test - np.mean(y_pred, axis=1, keepdims=True))**2 )
+        variance = np.mean( np.var(y_pred, axis=1, keepdims=True))
+
+        print("Error: ", error)
+        print("Bias: ", bias)
+        print("Variance: ", variance, "\n")
+        return error, bias, variance
+    """
+    def bias_variance_plot(self, p_start = 1, p_stop = 11, lmb = 0, n_boot = 100):
+
+        p_range = np.arange(p_start,p_stop + 1)
+        error = np.zeros(p_range.shape)
+        bias = np.zeros(p_range.shape)
+        variance = np.zeros(p_range.shape)
+
+        for p in p_range:
+            #Create feature matrix
+            X = self.create_feature_matrix(p)
+            #split data
+            X_train, X_test, y_train, y_test = self.split_data(X)
+            #Scale data
+            scaled_X_train, scaled_X_test = self.scale_data(X_train, X_test)
+
+            ##OLS
+            #Create beta
+            beta = self.ols_beta(scaled_X_train, y_train)
+            #then train the data and get prediction
+            y_tilde, y_predict = self.make_prediction(scaled_X_train, scaled_X_test, beta)
+            #Write R2/errors out to console
+            #test.accuracy_printer(y_train, y_tilde, y_test, y_predict, "OLS scores:")
+
+            print("p = ", p)
+
+            error[p-p_start], bias[p-p_start], variance[p-p_start] = self.bootstrapBiasVariance(scaled_X_train, y_train, scaled_X_test, y_test, n_boot, lmb)
+
+        fig, ax = plt.subplots()
+
+        ax.plot(p_range, error, label = 'Error')
+        ax.plot(p_range, bias, label = 'Bias²')
+        ax.plot(p_range, variance, label = 'Variance')
+        plt.xlabel("Model Complexity $p$")
+        plt.ylabel("Error")
+        #ax.set_yscale('log')
+        plt.legend()
+        if lmb == 0:
+            plt.title("Bias-Variance Tradeoff OLS")
+            fig.savefig("Bias-Variance Tradeoff OLS")
+        else:
+            plt.title("Bias-Variance Tradeoff Ridge")
+            fig.savefig("Bias-Variance Tradeoff Ridge")
+        plt.show()
 
     def k_fold(self, x, splits = 5, shuffle = False):
 
@@ -244,6 +297,14 @@ class regression:
         MSE_kfold_lasso = np.zeros((lmb_count,splits))
         MSE_kfold_ols = np.zeros((lmb_count,splits))
 
+        R2_kfold_ridge = np.zeros((lmb_count,splits))
+        R2_kfold_lasso = np.zeros((lmb_count,splits))
+        R2_kfold_ols = np.zeros((lmb_count,splits))
+
+        #error_kfold_ols = np.zeros(lmb_count)
+        #bias_kfold_ols = np.zeros(lmb_count)
+        #variance_kfold_ols = np.zeros(lmb_count)
+
         for i in range(lmb_count):
             for j in range(splits):
                 X_train_kfold = X[train_inds[j]]
@@ -256,24 +317,27 @@ class regression:
                     beta_kfold_ols = self.ols_beta(X_train_kfold, y_train_kfold)
                     y_pred_kfold_ols = self.make_single_prediction(X_test_kfold, beta_kfold_ols)
                     MSE_kfold_ols[i,j] = self.MSE(y_test_kfold, y_pred_kfold_ols)
+                    R2_kfold_ols[i,j] = self.R2(y_test_kfold,y_pred_kfold_ols)
 
                 beta_kfold_ridge = self.ridge_beta(X_train_kfold, y_train_kfold, lmb[i])
                 y_pred_kfold_ridge = self.make_single_prediction(X_test_kfold, beta_kfold_ridge)
                 MSE_kfold_ridge[i,j] = self.MSE(y_test_kfold, y_pred_kfold_ridge)
+                R2_kfold_ridge[i,j] = self.R2(y_test_kfold,y_pred_kfold_ridge)
 
-                beta_kfold_lasso, b, y_pred_kfold_lasso = self.lasso(X_train_kfold, X_test_kfold, y_train_kfold, lmb[i])
-                #y_pred_kfold_lasso = self.make_single_prediction(X_test_kfold, beta_kfold_lasso)
-                #print(beta_kfold_lasso)
-                """
-                beta_kfold_lasso = skl.Lasso(alpha=lmb[i]).fit(X_train_kfold, y_train_kfold)
-                y_pred_kfold_lasso = self.make_single_prediction(X_test_kfold, beta_kfold_lasso)
-                """
+                _, _, y_pred_kfold_lasso = self.lasso(X_train_kfold, X_test_kfold, y_train_kfold, lmb[i])
                 MSE_kfold_lasso[i,j] = self.MSE(y_test_kfold, y_pred_kfold_lasso)
+                R2_kfold_lasso[i,j] = self.R2(y_test_kfold,y_pred_kfold_lasso)
 
         MSE_kfold_ols = np.mean(MSE_kfold_ols, axis=1)
         MSE_kfold_ols[:] = MSE_kfold_ols[0]
         MSE_kfold_ridge = np.mean(MSE_kfold_ridge, axis=1)
         MSE_kfold_lasso = np.mean(MSE_kfold_lasso, axis=1)
+
+        R2_kfold_ols = np.mean(R2_kfold_ols, axis=1)
+        R2_kfold_ols[:] = R2_kfold_ols[0]
+        R2_kfold_ridge = np.mean(R2_kfold_ridge, axis=1)
+        R2_kfold_lasso = np.mean(R2_kfold_lasso, axis=1)
+
 
         fig, ax = plt.subplots()
         ax.plot(lmb, MSE_kfold_ols, label = "Ordinary Least Squares")
@@ -286,10 +350,26 @@ class regression:
 
         plt.xlabel("Hyperparameter $\lambda$")
         plt.ylabel("Estimated MSE")
-        plt.title("MSE k-fold cross validation")
+        plt.title("MSE with k-fold cross validation")
         plt.xlim(lmb[0], lmb[-1]+1)
         plt.ylim(0.8*np.min(np.array((np.min(MSE_kfold_ridge), np.min(MSE_kfold_ols), np.min(MSE_kfold_lasso)))), 1.2*np.max(np.array((np.max(MSE_kfold_ridge), np.max(MSE_kfold_ols), np.max(MSE_kfold_lasso)))))
         plt.show()
         fig.savefig("K-fold-MSE")
+
+        fig2, ax2 = plt.subplots()
+        ax2.plot(lmb, R2_kfold_ols, label = "Ordinary Least Squares")
+        ax2.plot(lmb, R2_kfold_ridge, label = "Ridge Regression")
+        ax2.plot(lmb, R2_kfold_lasso, label = "Lasso Regression")
+
+        plt.legend()
+        ax2.set_xscale('log')
+
+        plt.xlabel("Hyperparameter $\lambda$")
+        plt.ylabel("Estimated R2 Score")
+        plt.title("R2 Score with k-fold cross validation")
+        plt.xlim(lmb[0], lmb[-1]+1)
+        plt.ylim(-0.5, 1.1)
+        plt.show()
+        fig2.savefig("K-fold-R2")
 
         return

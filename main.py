@@ -10,8 +10,8 @@ def FrankeFunction(x, y):
 
 
 
-n = 4000
-#np.random.seed(1111)
+n = 400
+np.random.seed(2020)
 # noise uncertainty
 sigma = 0.1
 
@@ -73,4 +73,6 @@ t = test.bootstrap()
 
 test.bootstrapBiasVariance(scaled_X_train, y_train, scaled_X_test, y_test, 1000)
 """
-test.ridge_cross_validation(scaled_X_train, data, splits = 2)
+test.ridge_cross_validation(scaled_X_train, data, splits = 5)
+
+#test.bias_variance_plot(0, 11, lmb = 0)
