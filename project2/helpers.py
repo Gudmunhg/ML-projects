@@ -9,9 +9,9 @@ class sigmoid:
         return 1 / (1 + np.exp(-x))
 
     def derivative(self, x: np.ndarray) -> np.ndarray:
-        #e = np.exp(x)
-        #return e/((1 + e)**2)
-        return x*(1 - x) 
+        e = np.exp(x)
+        return e/((1 + e)**2)
+        #return x*(1 - x)
 
 class ReLU:
     def __call__(self, x: np.ndarray) -> np.ndarray:
@@ -20,7 +20,19 @@ class ReLU:
     def derivative(self, x: np.ndarray) -> np.ndarray:
         return np.heaviside(x, 1)
 
+class leakyReLU:
+    def __call__(self, x: np.ndarray) -> np.ndarray:
+        return np.maximum(-0.01*x, x)
 
+    def derivative(self, x: np.ndarray) -> np.ndarray:
+        return np.heaviside(x, 1)*0.99 + 0.01
+
+class tanh:
+    def __call__(self, x: np.ndarray) -> np.ndarray:
+        return np.tanh(x)
+
+    def derivative(self, x: np.ndarray) -> np.ndarray:
+        return (np.tanh(x)**2)/(np.sinh(x)**2)
 #def ReLU(x: np.ndarray) -> np.ndarray:
 #    return np.maximum(np.zeros(x.shape), x)
 

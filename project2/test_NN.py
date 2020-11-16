@@ -53,7 +53,7 @@ Create NN first, then run a grid search to find optimal values of eta and lmbda
 Then create second class that trains with the optimal parameters
 """
 
-NN = NeuralNetwork(X_train, Y_train_onehot, features, hidden_layer, categories, sigmoid)
+NN = NeuralNetwork(X_train, Y_train_onehot, features, hidden_layer, categories)
 a, lr, lmbda, train_accuracy, test_accuracy = NN.grid_search(X_test, Y_test, Y_train)
 
 fig, ax = plt.subplots(figsize = (10, 10))
@@ -73,7 +73,7 @@ plt.show()
 #a = 95833... wiht lr = 0.005336699231206312 and lmb = 2.1544346900318865
 
 
-NN2 = NeuralNetwork(X_train, Y_train_onehot, features, hidden_layer, categories, sigmoid)
+NN2 = NeuralNetwork(X_train, Y_train_onehot, features, hidden_layer, categories)
 lr = 0.005336699231206312
 lmbda = 2.1544346900318865
 NN2.train(lr, lmbda)
