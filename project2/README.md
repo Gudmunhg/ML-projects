@@ -16,7 +16,7 @@ Runs the nerual network with the Franke function
 ### structs.py
 Contains dataclasses used by neural network
 
-###helpers.py
+### helpers.py
 Contains some of the functions and classes used by both neural networks
 
 
