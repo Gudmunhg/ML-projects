@@ -1,4 +1,3 @@
-# ML-projects
 # Project 1
 ## Regression analysis using OLS, Ridge and LASSO regression.
 
