@@ -26,7 +26,6 @@ def diffusion_data(Nx, Nt):
     x = x_np.ravel()
     t = t_np.ravel()
 
-    # The construction phase
     x = tf.reshape(tf.convert_to_tensor(x), shape=(-1, 1))
     t = tf.reshape(tf.convert_to_tensor(t), shape=(-1, 1))
 
@@ -88,16 +87,16 @@ def train(diffusion_params=None, eigen_params=None, num_iter=10000, lr=0.001, op
             x = diffusion_params[1]
             t = diffusion_params[2]
 
-            g_trial = (1 - t) * u(x) + x * (1 - x) * t * out_l
+            u_trial = (1 - t) * g(x) + x * (1 - x) * t * out_l
 
-            g_trial_dt = tf.gradients(g_trial, t)
-            g_trial_d2x = tf.gradients(tf.gradients(g_trial, x), x)
+            u_trial_dt = tf.gradients(u_trial, t)
+            u_trial_d2x = tf.gradients(tf.gradients(u_trial, x), x)
 
             zeros = tf.reshape(tf.convert_to_tensor(
                 np.zeros(x.shape)), shape=(-1, 1))
 
             loss = tf.losses.mean_squared_error(
-                zeros, g_trial_dt[0] - g_trial_d2x[0])
+                zeros, u_trial_dt[0] - u_trial_d2x[0])
 
     with tf.name_scope('train'):
         opt = tf.train.AdamOptimizer(lr)
@@ -131,13 +130,13 @@ def train(diffusion_params=None, eigen_params=None, num_iter=10000, lr=0.001, op
                 # If one wants to see how the cost function behaves during training
                 # if i % 100 == 0:
                 #    print(loss.eval())
-            g_dnn = g_trial.eval()
+            u_dnn = u_trial.eval()
             analytic_solution = (tf.exp(-(np.pi**2) * t)
                                  * tf.sin(np.pi * x)).eval()
-        return g_dnn, analytic_solution
+        return u_dnn, analytic_solution
 
 
-def u(x):
+def g(x):
     return tf.sin(np.pi * x)
 
 
@@ -149,6 +148,7 @@ def solve_diffusion_with_network():
 
     print("Maximum difference between analytic solution and NN: ",
           np.max(np.abs(analytic_solution - solution)))
+
     tf.reset_default_graph()
 
 
@@ -175,7 +175,7 @@ def eigenvalues_with_network(A, x_0, matrix_size, num_iter=10000, layers=[50], m
     return eigen_val_nn
 
 
-# solve_diffusion_with_network()
+solve_diffusion_with_network()
 
 matrix_size = 6
 A, x_0, eigen_vals = eigen_data(matrix_size)
@@ -194,3 +194,4 @@ print("The absolute error of NN model compared with numpy is {} for lambda_max a
     abs_error_max, abs_error_min))
 print("The relative error is {} for lambda_max and {} for lambda_min".format(
     abs_error_max / np.max(eigen_vals), abs_error_min / np.min(eigen_vals)))
+
