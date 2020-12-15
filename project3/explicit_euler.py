@@ -1,34 +1,57 @@
 import numpy as np
-from scipy.sparse import diags
 import matplotlib.pyplot as plt
 
 def g(x):
     return np.sin(np.pi * x)
 
 
-dx = 0.01
+L = 1
+T = 1
+dx = 0.001
 dt = 0.5 * dx**2
-x = np.arange(0, 1, dx)
-t = np.arange(0, 1, dt)
+x = np.arange(0, L, dx)
+t = np.arange(0, T, dt)
 
 alpha = dt / dx**2
 
-V = np.zeros(len(x))
+u = np.zeros(len(x))   # solution array
+u_1 = np.zeros(len(x))
+u_1[:] = g(x[:])
+Nx = len(x) - 1
 
-u = np.zeros(len(x))
-unew = np.zeros(len(x))
+selected_times = [t[0], t[int(len(t)/2)], t[-1]]
+stored_solution = np.zeros([len(selected_times), len(x)])
 
-for i in range(1, len(x) - 1):
-	u[i] = g(x[i])
+stored = 0
+for time in t:
+    u[1:Nx] = u_1[1:Nx] + alpha * (u_1[0:Nx - 1] - 2 * u_1[1:Nx] + u_1[2:Nx + 1])
 
-for _ in range(1, len(t) - 1):
-	for i in range(1, len(x) - 1):
-		unew[i] = alpha * u[i - 1] + (1 - 2*alpha) * u[i] + alpha * u[i + 1]
+    if time in selected_times:
+        stored_solution[stored] = u
+        stored += 1
 
-analytic_solution = (np.exp(-(np.pi**2) * t)* np.sin(np.pi * x))
-print(analytic_solution)
+    u[0] = 0
+    u[Nx] = 0
 
-plt.plot(x, unew)
+    u_1, u = u, u_1
+
+def analytic(x, t):
+    return (np.exp(-(np.pi**2) * t)* np.sin(np.pi * x))
+
+
+plt.plot(x, stored_solution[0], label="Num")
+plt.plot(x, analytic(x, 0), label="analytic")
+plt.legend()
 plt.show()
 
-A = diags([alpha, 1 - 2*alpha, alpha], [-1, 0, 1], shape=(len(x), len(t))).toarray()
+
+plt.plot(x, stored_solution[1], label="Num")
+plt.plot(x, analytic(x, 0.5), label="analytic")
+plt.legend()
+plt.show()
+
+
+plt.plot(x, stored_solution[2], label="Num")
+plt.plot(x, analytic(x, t[-1]), label="analytic")
+plt.legend()
+plt.show()

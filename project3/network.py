@@ -140,16 +140,18 @@ def g(x):
     return tf.sin(np.pi * x)
 
 
-def solve_diffusion_with_network():
-    x, t, points = diffusion_data(10, 10)
-    dnn_output = prepare_layers([90], points)
+def solve_diffusion_with_network(Nx, Nt, layers=[10], opt=tf.train.GradientDescentOptimizer, lr=0.1):
+    x, t, points = diffusion_data(Nx, Nt)
+    dnn_output = prepare_layers(layers, points, activation=tf.nn.tanh)
     diffusion_params = [dnn_output, x, t]
-    solution, analytic_solution = train(diffusion_params=diffusion_params)
+    solution, analytic_solution = train(diffusion_params=diffusion_params, optimizer=opt, lr=lr)
 
     print("Maximum difference between analytic solution and NN: ",
           np.max(np.abs(analytic_solution - solution)))
 
     tf.reset_default_graph()
+
+    return solution, analytic_solution
 
 
 def eigenvalues_with_network(A, x_0, matrix_size, num_iter=10000, layers=[50], min=False, act=tf.nn.sigmoid):
@@ -174,24 +176,82 @@ def eigenvalues_with_network(A, x_0, matrix_size, num_iter=10000, layers=[50], m
 
     return eigen_val_nn
 
+Nx = 20
+Nt = 20
 
-solve_diffusion_with_network()
+#Nx = 1000
+#Nt = 2 000 000
+optimizers = [tf.train.AdadeltaOptimizer, tf.train.AdagradOptimizer, tf.train.AdamOptimizer, tf.train.GradientDescentOptimizer, tf.train.RMSPropOptimizer]
 
-matrix_size = 6
-A, x_0, eigen_vals = eigen_data(matrix_size)
+s, a_s = solve_diffusion_with_network(Nx, Nt, [300], opt=tf.train.AdamOptimizer, lr=0.001)
 
-print("Numpy eigenvalues: \n", eigen_vals)
+a_s = a_s.reshape((Nt, Nx))
+s = s.reshape((Nt, Nx))
 
-eigen_max = eigenvalues_with_network(A, x_0, matrix_size)
+x = np.linspace(0, 1, Nx)
+t = np.linspace(0, 1, Nt)
 
-eigen_min = eigenvalues_with_network(-A, x_0, matrix_size,
-                                     num_iter=50000, layers=[10], act=tf.nn.tanh, min=True)
+X, T = np.meshgrid(x, t)
 
-abs_error_max = abs(np.max(eigen_vals) - eigen_max)
-abs_error_min = abs(np.min(eigen_vals) - eigen_min)
+#I.e t = 0, t = 0.5 and t = 1
+indx1 = 0
+indx2 = int(Nt / 2)
+indx3 = Nt - 1
 
-print("The absolute error of NN model compared with numpy is {} for lambda_max and {} for lambda_min".format(
-    abs_error_max, abs_error_min))
-print("The relative error is {} for lambda_max and {} for lambda_min".format(
-    abs_error_max / np.max(eigen_vals), abs_error_min / np.min(eigen_vals)))
+t1 = t[indx1]
+t2 = t[indx2]
+t3 = t[indx3]
+
+# Slice the results from the DNN
+res1 = s[indx1, :]
+res2 = s[indx2, :]
+res3 = s[indx3, :]
+
+# Slice the analytical results
+res_analytical1 = a_s[indx1, :]
+res_analytical2 = a_s[indx2, :]
+res_analytical3 = a_s[indx3, :]
+
+# Plot the slices
+plt.figure(figsize=(10, 10))
+plt.title("Computed solutions at time = %g" % t1)
+plt.plot(x, res1)
+plt.plot(x,res_analytical1)
+plt.legend(['Neural network', 'Analytical'])
+
+plt.figure(figsize=(10, 10))
+plt.title("Computed solutions at time = %g" % t2)
+plt.plot(x, res2)
+plt.plot(x,res_analytical2)
+plt.legend(['Neural network', 'Analytical'])
+
+plt.figure(figsize=(10, 10))
+plt.title("Computed solutions at time = %g" % t3)
+plt.plot(x, res3)
+plt.plot(x, res_analytical3)
+plt.legend(['Neural network', 'Analytical'])
+
+plt.show()
+
+
+
+def get_eigen_results():
+    matrix_size = 6
+    A, x_0, eigen_vals = eigen_data(matrix_size)
+
+    print("Numpy eigenvalues: \n", eigen_vals)
+
+    eigen_max = eigenvalues_with_network(A, x_0, matrix_size)
+
+    eigen_min = eigenvalues_with_network(-A, x_0, matrix_size,
+                                         num_iter=50000, layers=[10], act=tf.nn.tanh, min=True)
+
+    abs_error_max = abs(np.max(eigen_vals) - eigen_max)
+    abs_error_min = abs(np.min(eigen_vals) - eigen_min)
+
+    print("The absolute error of NN model compared with numpy is {} for lambda_max and {} for lambda_min".format(
+        abs_error_max, abs_error_min))
+
+    print("The relative error is {} for lambda_max and {} for lambda_min".format(
+        abs_error_max / np.max(eigen_vals), abs_error_min / np.min(eigen_vals)))
 
