@@ -1,13 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-
+from matplotlib.ticker import FormatStrFormatter
 
 mpl.style.use('ggplot')
 fontsize = 20
 newparams = {'axes.titlesize': fontsize + 3, 'axes.labelsize': fontsize + 2,
              'lines.markersize': 7, 'figure.figsize': [15, 10],
-             'ytick.labelsize': fontsize, 'figure.autolayout': True,
+             'ytick.labelsize': fontsize, 'figure.autolayout': False,
              'xtick.labelsize': fontsize, 'legend.loc': 'best',
              'legend.fontsize': fontsize + 2, 'figure.titlesize': fontsize + 5}
 plt.rcParams.update(newparams)
@@ -56,18 +56,20 @@ def produce_results(dx, dt, L, T):
     print("Max diff between analytical solution and numeric approximation using forward Euler with dx = %.2f :" % dx)
 
     if len(times) <= 4:
-        fig, axs = plt.subplots(len(times))
+        fig, axs = plt.subplots(len(times), sharex=True)
         fig.suptitle(r"Forward Euler: $\Delta x = %.3f$" % dx)
 
         for i in range(len(times)):
             a_s = analytic(x, times[i])
             axs[i].plot(x, stored_solution[i], label="Numerical", linewidth=5)
             axs[i].plot(x, a_s, label="Analytic", linewidth=5)
-            axs[i].set_title(r"$t = %.2f$" % times[i])
+            axs[i].set_title(r"$t = %.3f$" % times[i])
+            if a_s[int(len(x)/2)] < 0.1:
+                axs[i].yaxis.set_major_formatter(FormatStrFormatter('%.e'))
 
             print("diff = ", np.max(np.abs(a_s - stored_solution[i])), "with t = {:2f}".format(times[i]))
 
-        fig.tight_layout(rect=[0, 0, 1, 0.9])
+        fig.tight_layout(rect=[0, 0, 1, 0.95])
         #plt.subplots_adjust(top=0.85)
         plt.legend()
         #plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')

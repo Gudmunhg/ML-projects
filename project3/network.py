@@ -3,6 +3,7 @@ from matplotlib import cm
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import axes3d
 from typing import Callable
+import matplotlib as mpl
 
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -15,6 +16,16 @@ tf.disable_v2_behavior()
 
 tf.set_random_seed(343)
 np.random.seed(343)
+
+
+mpl.style.use('ggplot')
+fontsize = 20
+newparams = {'axes.titlesize': fontsize + 3, 'axes.labelsize': fontsize + 2,
+             'lines.markersize': 7, 'figure.figsize': [15, 10],
+             'ytick.labelsize': fontsize, 'figure.autolayout': False,
+             'xtick.labelsize': fontsize, 'legend.loc': 'best',
+             'legend.fontsize': fontsize + 2, 'figure.titlesize': fontsize + 5}
+plt.rcParams.update(newparams)
 
 
 def diffusion_data(Nx, Nt):
@@ -140,11 +151,11 @@ def g(x):
     return tf.sin(np.pi * x)
 
 
-def solve_diffusion_with_network(Nx, Nt, layers=[10], opt=tf.train.GradientDescentOptimizer, lr=0.1):
+def solve_diffusion_with_network(Nx, Nt, layers=[10], opt=tf.train.AdamOptimizer, lr=0.1, num_iter=10000):
     x, t, points = diffusion_data(Nx, Nt)
     dnn_output = prepare_layers(layers, points, activation=tf.nn.tanh)
     diffusion_params = [dnn_output, x, t]
-    solution, analytic_solution = train(diffusion_params=diffusion_params, optimizer=opt, lr=lr)
+    solution, analytic_solution = train(diffusion_params=diffusion_params, optimizer=opt, lr=lr, num_iter=num_iter)
 
     print("Maximum difference between analytic solution and NN: ",
           np.max(np.abs(analytic_solution - solution)))
@@ -176,11 +187,59 @@ def eigenvalues_with_network(A, x_0, matrix_size, num_iter=10000, layers=[50], m
 
     return eigen_val_nn
 
+def run_diffusion_with_diff_iters(num_iter):
+    solutions = np.zeros((len(num_iter), (10*10)))
+
+    x = np.linspace(0, 1, 10)
+    t = np.linspace(0, 1, 10)
+    plt.figure(figsize=(10, 10))
+
+    for sol in range(len(num_iter)):
+        s, a_s = solve_diffusion_with_network(10, 10, [300], opt=tf.train.AdamOptimizer, lr=0.001, num_iter=num_iter[sol])
+        s = s.reshape((10, 10))
+        plt.plot(x, s[5, :], label="Iterations = {}".format(num_iter[sol]))
+
+    a_s = a_s.reshape((10, 10))[5, :]
+
+    plt.title("Computed solutions at time = %g" % t[5])
+    plt.plot(x, a_s, label="Analytic solution")
+    plt.xlabel(r"$x$")
+    plt.ylabel(r"$u_t(x,t)$")
+    plt.legend()
+    plt.show()
+
+def run_diffusion_with_diff_optimizers():
+    optimizers = [tf.train.AdadeltaOptimizer, tf.train.AdagradOptimizer, tf.train.AdamOptimizer, tf.train.GradientDescentOptimizer, tf.train.RMSPropOptimizer]
+    opt_str = ["Adadelta", "Adagrad", "Adam", "GradientDescent", "RMSProp"]
+
+    x = np.linspace(0, 1, 10)
+    t = np.linspace(0, 1, 10)
+    plt.figure(figsize=(10, 10))
+
+    for o in range(len(optimizers)):
+        s, a_s = solve_diffusion_with_network(10, 10, [300], opt=optimizers[o], lr=0.001)
+        s = s.reshape((10, 10))
+        plt.plot(x, s[5, :], label="{}".format(opt_str[o]))
+
+    a_s = a_s.reshape((10, 10))[5, :]
+
+    plt.title("Computed solutions at time = %g" % t[5])
+    plt.plot(x, a_s, label="Analytic solution")
+    plt.xlabel(r"$x$")
+    plt.ylabel(r"$u_t(x,t)$")
+    plt.legend()
+    plt.show()
+
+#run_diffusion_with_diff_iters([10, 100, 1000, 10000, 100000])
+run_diffusion_with_diff_optimizers()
+
+"""
 Nx = 20
 Nt = 20
 
 #Nx = 1000
 #Nt = 2 000 000
+
 optimizers = [tf.train.AdadeltaOptimizer, tf.train.AdagradOptimizer, tf.train.AdamOptimizer, tf.train.GradientDescentOptimizer, tf.train.RMSPropOptimizer]
 
 s, a_s = solve_diffusion_with_network(Nx, Nt, [300], opt=tf.train.AdamOptimizer, lr=0.001)
@@ -232,7 +291,7 @@ plt.plot(x, res_analytical3)
 plt.legend(['Neural network', 'Analytical'])
 
 plt.show()
-
+"""
 
 
 def get_eigen_results():
