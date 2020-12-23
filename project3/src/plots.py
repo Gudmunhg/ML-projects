@@ -1,8 +1,12 @@
-import numpy as np
 from matplotlib import cm
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import axes3d
 import matplotlib as mpl
+
+"""
+This file contains some functions for creating spesific plots. Currently only 
+plot3D() is being used by other .py files
+"""
 
 mpl.style.use('ggplot')
 fontsize = 20

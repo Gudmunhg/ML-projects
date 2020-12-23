@@ -13,6 +13,11 @@ newparams = {'axes.titlesize': fontsize + 3, 'axes.labelsize': fontsize + 2,
              'legend.fontsize': fontsize + 2, 'figure.titlesize': fontsize + 5}
 plt.rcParams.update(newparams)
 
+"""
+Program solves the diffusion equation using the forward Euler method.
+"""
+
+
 def g(x):
     return np.sin(np.pi * x)
 

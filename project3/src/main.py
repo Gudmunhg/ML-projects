@@ -4,6 +4,12 @@ import tensorflow.compat.v1 as tf
 from plots import *
 import os
 
+"""
+This files contains the functions that starts training of the neural network and
+outputs results to file. There are also functions that plot the various results.
+The functions uses should be self explanatory.
+"""
+
 mpl.style.use('ggplot')
 
 fontsize = 20
@@ -94,8 +100,6 @@ def load_optimal_results(path):
     X, T = np.meshgrid(x, t)
     plot3D(X, T, s, a, np.abs(a - s))
 
-
-
 def get_eigen_results():
     matrix_size = 6
     A, x_0, eigen_vals = nn.eigen_data(matrix_size)
@@ -127,4 +131,4 @@ def get_eigen_results():
 #load_var_optimisers(path)
 #load_var_iters(path)
 #load_optimal_results(path)
-get_eigen_results()
+#get_eigen_results()

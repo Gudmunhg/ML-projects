@@ -22,6 +22,14 @@ tf.set_random_seed(343)
 np.random.seed(343)
 
 
+"""
+Neural Network implementation for solving (partial) differential equations.
+"""
+
+"""
+Function for creating and preparing data for input into network.
+Spesifically diffusion problems
+"""
 def diffusion_data(Nx, Nt):
     x_np = np.linspace(0, 1, Nx)
     t_np = np.linspace(0, 1, Nt)
@@ -36,7 +44,10 @@ def diffusion_data(Nx, Nt):
 
     return x, t, tf.concat([x, t], 1)
 
-
+"""
+Function for creating and preparing data for input into network.
+Spesifically eigenvalue problems
+"""
 def eigen_data(matrix_size=6):
     A = np.random.random_sample(size=(matrix_size, matrix_size))
     A = (A.T + A) / 2.0
@@ -48,6 +59,9 @@ def eigen_data(matrix_size=6):
     return A, x_0, eigen_vals
 
 
+"""
+Prepare input and output layer, and also create hidden layers 
+"""
 def prepare_layers(num_hidden_neurons: list, input, activation=None, size=1):
     with tf.variable_scope('dnn'):
         nh = num_hidden_neurons
@@ -67,7 +81,9 @@ def prepare_layers(num_hidden_neurons: list, input, activation=None, size=1):
 
     return dnn_output
 
-
+"""
+Train the network for the spesific problem.
+"""
 def train(diffusion_params=None, eigen_params=None, num_iter=10000, lr=0.001, optimizer=None):
     with tf.name_scope('loss'):
         if (eigen_params is not None):
